@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>turtlebot4</name>
+  <version>2.0.2</version>
+  <description>Customized metapackage for Turtlebot4</description>
+  <maintainer email="rprocha@isr.uc.pt">Rui P. Rocha</maintainer>
+  <maintainer email="civerachb@clearpathrobotics.com">Chris Iverach-Brereton</maintainer>
+  <maintainer email="hluo@clearpathrobotics.com">Hilary Luo</maintainer>
+
+  <license>Apache 2.0</license>
+
+  <author email="rkreinin@clearpathrobotics.com">Roni Kreinin</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>turtlebot4_node</depend>
+  <depend>turtlebot4_msgs</depend>
+  <depend>turtlebot4_description</depend>
+  <depend>turtlebot4_viz</depend>
+  <depend>turtlebot4_simulator</depend>
+  <depend>turtlebot4_navigation</depend>
+  <depend>irobot</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
