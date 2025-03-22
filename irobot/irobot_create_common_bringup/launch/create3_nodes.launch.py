@@ -80,10 +80,10 @@ def generate_launch_description():
             'safety_override': 'backup_only'
         }],
         output='screen',
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static')
-        ]
+        # remappings=[
+        #     ('/tf', 'tf'),
+        #     ('/tf_static', 'tf_static')
+        # ]
     )
 
     # Publish wheel status
@@ -140,7 +140,7 @@ def generate_launch_description():
     # Define LaunchDescription variable
     ld = LaunchDescription(ARGUMENTS)
     # Include robot description
-    ld.add_action(diffdrive_controller)
+    #ld.add_action(diffdrive_controller)
     # Add nodes to LaunchDescription
     ld.add_action(hazards_vector_node)
     ld.add_action(ir_intensity_vector_node)

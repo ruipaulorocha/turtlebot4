@@ -18,7 +18,7 @@
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration, OpaqueFunction
 from launch.substitutions import Command, PathJoinSubstitution
 from launch.substitutions.launch_configuration import LaunchConfiguration
 
@@ -47,6 +47,14 @@ def generate_launch_description():
                                        'turtlebot4.urdf.xacro'])
     namespace = LaunchConfiguration('namespace')
 
+    # Opaque function
+    def frame_prefix(context):
+        ns = context.launch_configurations['namespace']
+        frame_prefix = '' if ns == '' else f'{ns}/'
+        return [SetLaunchConfiguration('frame_prefix', frame_prefix)]
+
+    frame_prefix_fun = OpaqueFunction(function = frame_prefix)
+
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -58,11 +66,13 @@ def generate_launch_description():
                 'xacro', ' ', xacro_file, ' ',
                 'gazebo:=ignition', ' ',
                 'namespace:=', namespace])},
+            # The following parameter is key for multi-robot configuration
+            {'frame_prefix': LaunchConfiguration('frame_prefix')}
         ],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static')
-        ]
+        # remappings=[
+        #     ('/tf', 'tf'),
+        #     ('/tf_static', 'tf_static')
+        # ]
     )
 
     joint_state_publisher = Node(
@@ -71,14 +81,15 @@ def generate_launch_description():
         name='joint_state_publisher',
         output='screen',
         parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static')
-        ]
+        # remappings=[
+        #     ('/tf', 'tf'),
+        #     ('/tf_static', 'tf_static')
+        # ]
     )
 
     # Define LaunchDescription variable
     ld = LaunchDescription(ARGUMENTS)
+    ld.add_action(frame_prefix_fun)
     # Add nodes to LaunchDescription
     ld.add_action(robot_state_publisher)
     ld.add_action(joint_state_publisher)

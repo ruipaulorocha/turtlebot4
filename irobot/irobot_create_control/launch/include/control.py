@@ -25,6 +25,19 @@ def generate_launch_description():
     control_params_file = PathJoinSubstitution(
         [pkg_create3_control, 'config', 'control.yaml'])
 
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'joint_state_broadcaster',
+            '-c',
+            'controller_manager',
+            '--controller-manager-timeout',
+            '30'
+        ],
+        output='screen',
+    )
+
     diffdrive_controller_node = Node(
         package='controller_manager',
         executable='spawner',
@@ -34,19 +47,7 @@ def generate_launch_description():
             'diffdrive_controller',
             '-c',
             'controller_manager',
-            '--controller-manager-timeout',
-            '30'
-        ],
-        output='screen',
-    )
-
-    joint_state_broadcaster_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            'joint_state_broadcaster',
-            '-c',
-            'controller_manager',
+            '-n', namespace, # add this prefix to the node name and tf frames
             '--controller-manager-timeout',
             '30'
         ],
@@ -63,42 +64,42 @@ def generate_launch_description():
 
     # Static transform from <namespace>/odom to odom
     # See https://github.com/ros-controls/ros2_controllers/pull/533
-    tf_namespaced_odom_publisher = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='tf_namespaced_odom_publisher',
-        arguments=['0', '0', '0',
-                   '0', '0', '0',
-                   'odom', [namespace, '/odom']],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static')
-        ],
-        output='screen',
-        condition=IfCondition(NotEqualsSubstitution(LaunchConfiguration('namespace'), ''))
-    )
+    # tf_namespaced_odom_publisher = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='tf_namespaced_odom_publisher',
+    #     arguments=['0', '0', '0',
+    #                '0', '0', '0',
+    #                'odom', [namespace, '/odom']],
+    #     # remappings=[
+    #     #     ('/tf', 'tf'),
+    #     #     ('/tf_static', 'tf_static')
+    #     #],
+    #     output='screen',
+    #     condition=IfCondition(NotEqualsSubstitution(LaunchConfiguration('namespace'), ''))
+    # )
 
     # Static transform from <namespace>/base_link to base_link
-    tf_namespaced_base_link_publisher = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='tf_namespaced_base_link_publisher',
-        arguments=['0', '0', '0',
-                   '0', '0', '0',
-                   [namespace, '/base_link'], 'base_link'],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static')
-        ],
-        output='screen',
-        condition=IfCondition(NotEqualsSubstitution(LaunchConfiguration('namespace'), ''))
-    )
+    # tf_namespaced_base_link_publisher = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='tf_namespaced_base_link_publisher',
+    #     arguments=['0', '0', '0',
+    #                '0', '0', '0',
+    #                [namespace, '/base_link'], 'base_link'],
+    #     # remappings=[
+    #     #     ('/tf', 'tf'),
+    #     #     ('/tf_static', 'tf_static')
+    #     # ],
+    #     output='screen',
+    #     condition=IfCondition(NotEqualsSubstitution(LaunchConfiguration('namespace'), ''))
+    # )
 
     ld = LaunchDescription(ARGUMENTS)
 
     ld.add_action(joint_state_broadcaster_spawner)
     ld.add_action(diffdrive_controller_callback)
-    ld.add_action(tf_namespaced_odom_publisher)
-    ld.add_action(tf_namespaced_base_link_publisher)
+    #ld.add_action(tf_namespaced_odom_publisher)
+    #ld.add_action(tf_namespaced_base_link_publisher)
 
     return ld

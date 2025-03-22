@@ -18,10 +18,13 @@
 from ament_index_python.packages import get_package_share_directory
 
 from irobot_create_common_bringup.namespace import GetNamespacedName
-from irobot_create_common_bringup.offset import OffsetParser, RotationalOffsetX, RotationalOffsetY
+from irobot_create_common_bringup.offset import (OffsetParser,
+        RotationalOffsetX, RotationalOffsetY)
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
+from launch.actions import (DeclareLaunchArgument, GroupAction,
+        IncludeLaunchDescription, ExecuteProcess, SetEnvironmentVariable,
+        SetLaunchConfiguration, OpaqueFunction)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -118,11 +121,24 @@ def generate_launch_description():
     # Spawn dock at robot position + rotational offset
     x_dock = OffsetParser(x, dock_offset_x)
     y_dock = OffsetParser(y, dock_offset_y)
-    # Spawn robot slightly clsoer to the floor to reduce the drop
+    # Spawn robot slightly closer to the floor to reduce the drop
     # Ensures robot remains properly docked after the drop
     z_robot = OffsetParser(z, -0.0025)
     # Rotate dock towards robot
     yaw_dock = OffsetParser(yaw, 3.1416)
+
+    # Opaque function
+    def input_tf_topic(context):
+        ns = context.launch_configurations['namespace']
+        relay_needed = 'true' if ns else 'false'
+        return [
+            SetLaunchConfiguration('input_tf_topic', ns + '/tf'),
+            SetLaunchConfiguration('relay_needed', relay_needed),
+            SetLaunchConfiguration('relay_name', ns + '_relay')
+        ]
+
+    input_tf_topic_fun = OpaqueFunction(function = input_tf_topic)
+
 
     spawn_robot_group_action = GroupAction([
         PushRosNamespace(namespace),
@@ -209,11 +225,10 @@ def generate_launch_description():
             output='screen',
             arguments=[
                 '0', '0', '0', '0', '0', '0.0',
-                'rplidar_link', [robot_name, '/rplidar_link/rplidar']],
-            remappings=[
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static'),
-            ]
+                # the 1st frame_id was corrected to support the multi-robot case
+                [namespace, '/rplidar_link'],
+                [robot_name, '/rplidar_link/rplidar']
+            ],
         ),
 
         # OAKD static transform
@@ -226,16 +241,43 @@ def generate_launch_description():
             arguments=[
                 '0', '0', '0',
                 '1.5707', '-1.5707', '0',
-                'oakd_rgb_camera_optical_frame',
+                # the 1st frame_id was corrected to support the multi-robot case
+                [namespace, '/oakd_rgb_camera_optical_frame'],
                 [robot_name, '/oakd_rgb_camera_frame/rgbd_camera']
             ],
-            remappings=[
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static'),
-            ]
         ),
 
     ])
+
+    control_params_file = PathJoinSubstitution(
+        [get_package_share_directory('irobot_create_control'),
+            'config', 'control.yaml'])
+
+    diffdrive_controller_node = Node(
+        package='controller_manager',
+        executable='spawner',
+        parameters=[control_params_file],
+        arguments=[
+            'diffdrive_controller',
+            '-c',
+            'controller_manager',
+            '-n', namespace, # namespace
+            '--controller-manager-timeout',
+            '30',
+            #'--ros-args', '-p', 'tf_frame_prefix_enable:=False'
+        ],
+        output='screen',
+    )
+
+    relay_tf_topic = ExecuteProcess(
+        name=LaunchConfiguration('relay_name'),
+        condition=IfCondition(LaunchConfiguration('relay_needed')),
+        cmd=[
+            'ros2', 'run', 'topic_tools', 'relay',
+            LaunchConfiguration('input_tf_topic'), '/tf'
+        ]
+    )
+
 
     # Localization
     localization = IncludeLaunchDescription(
@@ -278,10 +320,13 @@ def generate_launch_description():
 
     # Define LaunchDescription variable
     ld = LaunchDescription(ARGUMENTS)
+    ld.add_action(input_tf_topic_fun)
     ld.add_action(param_file_cmd)
     ld.add_action(spawn_robot_group_action)
+    ld.add_action(diffdrive_controller_node)
     ld.add_action(localization)
     ld.add_action(slam)
     ld.add_action(nav2)
     ld.add_action(rviz)
+    ld.add_action(relay_tf_topic)
     return ld
