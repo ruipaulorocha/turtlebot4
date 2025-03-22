@@ -147,7 +147,9 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([robot_description_launch]),
             launch_arguments=[('model', LaunchConfiguration('model')),
-                              ('use_sim_time', LaunchConfiguration('use_sim_time'))]
+                              ('use_sim_time', LaunchConfiguration('use_sim_time')),
+                              #('namespace', LaunchConfiguration('namespace')) # not sure whether this is needed
+                ]
         ),
 
         # Dock description
@@ -328,5 +330,5 @@ def generate_launch_description():
     ld.add_action(slam)
     ld.add_action(nav2)
     ld.add_action(rviz)
-    ld.add_action(relay_tf_topic)
+    #ld.add_action(relay_tf_topic)
     return ld
